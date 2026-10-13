@@ -138,16 +138,44 @@ async function undoRemove($: $) {
   await update($, removed, () => null)
 }
 
-/** The checklist as drawn at the top or in the band: one line, or the line and its items. */
-async function drawChecklist($: $, ui: Table, current: Checklist, width: number) {
+// Rows an open item takes: its line, then its text wrapped beside the indent.
+// Counted short of the indent's real width so wrapping at words is not undercounted.
+function openItemRows(body: string, width: number): number {
+  const columns = Math.max(1, width - 11)
+
+  return 1 + body.split('\n').reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / columns)), 0)
+}
+
+/**
+ * The checklist as drawn at the top or in the band: one line, or the line and its items.
+ * Given `room`, a list taller than that keeps to it: the title, the items that fit as
+ * one line each, and how many are left. Answers the tree and the rows it takes.
+ */
+async function drawChecklist($: $, ui: Table, current: Checklist, width: number, room = Infinity) {
   const { Box, Button, Markdown, Text } = ui
   const isOpen = await read($, isExpanded)
   const openItems = await read($, expanded)
   const lastRemoved = await read($, removed)
   const [filled, empty] = progressBar(current)
-  const titleColumns = Math.max(8, width - 8)
+  // The row's padding, box, gap, gap and ✕ take 6 columns; the title takes the rest.
+  const titleColumns = Math.max(8, width - 6)
 
-  return (
+  const isEmpty = isOpen && current.items.length === 0
+  const fullRows = !isOpen
+    ? 1
+    : 1 +
+      (isEmpty ? 1 : 0) +
+      (lastRemoved ? 1 : 0) +
+      current.items.reduce(
+        (sum, item) => sum + (openItems.includes(item.id) ? openItemRows(item.body, width) : 1),
+        0,
+      )
+  const isTrimmed = fullRows > room
+  const items = !isOpen ? [] : isTrimmed ? current.items.slice(0, Math.max(0, room - 2)) : current.items
+  const hidden = isOpen && isTrimmed && room >= 2 ? current.items.length - items.length : 0
+  const rows = isTrimmed ? room : fullRows
+
+  const tree = (
     <Box flexDirection="column" width={width}>
       <Box flexDirection="row" backgroundColor={THEME.background} paddingX={1} width={width}>
         <Button key="toggle" plain onPress={() => update($, isExpanded, value => !value)}>
@@ -160,57 +188,61 @@ async function drawChecklist($: $, ui: Table, current: Checklist, width: number)
           <Text color={THEME.done}>{empty}</Text>
         </Button>
       </Box>
-      {isOpen && current.items.length === 0 && (
+      {isEmpty && (
         <Box backgroundColor={THEME.background} paddingX={1} width={width}>
           <Text color={THEME.done}>All items removed.</Text>
         </Box>
       )}
-      {isOpen &&
-        current.items.map(item => {
-          const isItemOpen = openItems.includes(item.id)
+      {items.map(item => {
+        const isItemOpen = !isTrimmed && openItems.includes(item.id)
 
-          return (
-            <Box flexDirection="column" width={width}>
-              <Box flexDirection="row" backgroundColor={THEME.background} paddingX={1} width={width}>
-                <Button key={`done:${item.id}`} plain onPress={() => toggleDone($, item.id)}>
-                  <Text color={THEME.text}>{item.isDone ? '☒' : '☐'}</Text>
-                </Button>
-                <Box width={titleColumns} marginLeft={1}>
-                  <Button
-                    key={`row:${item.id}`}
-                    plain
-                    onPress={() =>
-                      update($, expanded, ids =>
-                        ids.includes(item.id) ? ids.filter(one => one !== item.id) : [...ids, item.id],
-                      )
-                    }
+        return (
+          <Box flexDirection="column" width={width}>
+            <Box flexDirection="row" backgroundColor={THEME.background} paddingX={1} width={width}>
+              <Button key={`done:${item.id}`} plain onPress={() => toggleDone($, item.id)}>
+                <Text color={THEME.text}>{item.isDone ? '☒' : '☐'}</Text>
+              </Button>
+              <Box width={titleColumns} marginLeft={1}>
+                <Button
+                  key={`row:${item.id}`}
+                  plain
+                  onPress={() =>
+                    update($, expanded, ids =>
+                      ids.includes(item.id) ? ids.filter(one => one !== item.id) : [...ids, item.id],
+                    )
+                  }
+                >
+                  <Text color={THEME.muted}>{isItemOpen ? '▾' : '▸'} </Text>
+                  <Text color={THEME.muted}>{item.marker} </Text>
+                  <Text
+                    color={item.isDone ? THEME.done : THEME.text}
+                    strikethrough={item.isDone}
+                    wrap="truncate-end"
                   >
-                    <Text color={THEME.muted}>{isItemOpen ? '▾' : '▸'} </Text>
-                    <Text color={THEME.muted}>{item.marker} </Text>
-                    <Text
-                      color={item.isDone ? THEME.done : THEME.text}
-                      strikethrough={item.isDone}
-                      wrap="truncate-end"
-                    >
-                      {item.title}
-                    </Text>
-                  </Button>
-                </Box>
-                <Box marginLeft={1}>
-                  <Button key={`x:${item.id}`} plain onPress={() => remove($, item.id)}>
-                    <Text color={THEME.muted}>✕</Text>
-                  </Button>
-                </Box>
+                    {item.title}
+                  </Text>
+                </Button>
               </Box>
-              {isItemOpen && (
-                <Box backgroundColor={THEME.background} paddingLeft={6} paddingRight={1} width={width}>
-                  <Markdown text={item.body} dimColor={item.isDone} />
-                </Box>
-              )}
+              <Box marginLeft={1}>
+                <Button key={`x:${item.id}`} plain onPress={() => remove($, item.id)}>
+                  <Text color={THEME.muted}>✕</Text>
+                </Button>
+              </Box>
             </Box>
-          )
-        })}
-      {isOpen && lastRemoved && (
+            {isItemOpen && (
+              <Box backgroundColor={THEME.background} paddingLeft={6} paddingRight={1} width={width}>
+                <Markdown text={item.body} dimColor={item.isDone} />
+              </Box>
+            )}
+          </Box>
+        )
+      })}
+      {hidden > 0 && (
+        <Box backgroundColor={THEME.background} paddingX={1} width={width}>
+          <Text color={THEME.muted}>… {hidden} more</Text>
+        </Box>
+      )}
+      {isOpen && !isTrimmed && lastRemoved && (
         <Box backgroundColor={THEME.background} paddingX={1} width={width}>
           <Button key="undo" plain onPress={() => undoRemove($)}>
             <Text color={THEME.muted}>↶ undo remove "{lastRemoved.item.title}"</Text>
@@ -219,6 +251,8 @@ async function drawChecklist($: $, ui: Table, current: Checklist, width: number)
       )}
     </Box>
   )
+
+  return { tree, rows }
 }
 
 export const register: Register = on => {
@@ -299,12 +333,24 @@ export const register: Register = on => {
     // The transcript is a column narrower than the terminal; rows as wide as
     // the terminal lose their background there.
     const width = (e.viewport?.columns ?? 80) - 1
+    // The rows after this one paint over anything that spills past its last
+    // row on screen, so the checklist keeps to the rows this one shows.
+    const room = shown.last - shown.first + 1
+    const { tree, rows } = await drawChecklist($, ui, current, width, room)
 
     return (
       <ui.Box flexDirection="column">
         {drawn}
-        <ui.Box position="absolute" top={shown.first} left={0} width={width}>
-          {await drawChecklist($, ui, current, width)}
+        <ui.Box
+          key="pinned"
+          position="absolute"
+          top={shown.first}
+          left={0}
+          width={width}
+          height={Math.min(rows, room)}
+          overflow="hidden"
+        >
+          {tree}
         </ui.Box>
       </ui.Box>
     )
@@ -327,7 +373,7 @@ export const register: Register = on => {
 
     return (
       <Box flexDirection="column">
-        {isFallback && current && (await drawChecklist($, ui, current, e.props.bodyColumns))}
+        {isFallback && current && (await drawChecklist($, ui, current, e.props.bodyColumns)).tree}
         {isOffered && pending && (
           <Box flexDirection="row" gap={1}>
             <Text color={THEME.muted} wrap="truncate-end">

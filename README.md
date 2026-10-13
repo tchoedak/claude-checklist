@@ -5,6 +5,8 @@ A Claude Code mod that turns a list from Claude's reply into a checklist pinned 
 [![License](https://img.shields.io/github/license/tchoedak/claude-checklist)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/tchoedak/claude-checklist)](https://github.com/tchoedak/claude-checklist/stargazers)
 
+![Claude Checklist pinned to the top of a session, three items checked off and one expanded](claude-checklist.png)
+
 ## Install
 
 Inside Claude Code, run:
@@ -31,22 +33,15 @@ Then run `/reload-plugins` inside a session, or start a new one.
 
 ## What You See
 
-When a reply ends with a list of two or more items, the mod offers it:
+When a reply has a list of two or more items, the mod offers it above the prompt:
 
-```
-3-item list in the last reply  [ Save as checklist ]  ✕
-❯
-```
+![A Save as checklist button above the prompt, under Claude's 7-item release checklist](screenshots/save-offer.png)
 
-Save it and it pins to the top of the screen:
+Save it and it sits above the prompt, titled after the list's heading:
 
-```
-▾ Next steps 1/3 done ━━━━━━
-☒ ▸ 1. Fix the auth bug                                    ✕
-☐ ▾ 2. Update the README                                   ✕
-      Update the README: document the new `--dry-run` flag
-☐ ▸ 3. Run npm run lint and fix the warnings               ✕
-```
+![The saved checklist above the prompt, 0 of 7 done](screenshots/above-prompt.png)
+
+Once the conversation scrolls past it, it pins to the top of the screen, as in the picture at the top of this page.
 
 - **Pinned while you scroll.** The checklist sits on the top edge of the transcript whatever is scrolled beneath it. When nothing is scrolled off the top, it moves to the band above the prompt instead.
 - **Short items, full text on demand.** Each item shows its bold lead or first clause. Click it to expand the item's full markdown, nested bullets included.
@@ -77,7 +72,7 @@ Claude Checklist is a [mod](https://code.claude.com/docs/en/plugins/mods/overvie
 
 1. On `turn.complete` it parses the answer for lists and, if it finds one with two or more items, offers it in the band above the prompt.
 2. Saving stores the checklist in plugin state, and in the mod's store keyed by session id so a resumed session finds it again. Only the 50 most recent sessions are kept.
-3. Every transcript row reports which of its lines are on screen. The row cut off by the top of the viewport draws the checklist over that edge with absolute positioning, which is what keeps it pinned. When no row is cut off, the band above the prompt draws it instead.
+3. Every transcript row reports which of its lines are on screen. The row cut off by the top of the viewport draws the checklist over that edge with absolute positioning, which is what keeps it pinned. Rows below paint over anything that spills past that row, so the checklist keeps to the rows it has on screen: when that row is short, you see the title, the items that fit and `… N more`. When no row is cut off, the band above the prompt draws it instead.
 
 ## Security
 

@@ -1,7 +1,7 @@
 {
   "name": "checklist",
   "description": "Pin a list from Claude's reply as a checklist at the top of your session: short items, click to expand, check off or remove",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "Tenzin Choedak",
     "url": "https://github.com/tchoedak"

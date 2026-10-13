@@ -129,6 +129,37 @@ for (const surface of ['terminal', 'desktop'] as const) {
   })
 }
 
+test('pinned over a short row, it keeps to the rows that row shows instead of bleeding into the next', async ($, on) => {
+  engineBeneath(on)
+  await start($)
+  await $.command.run({ ...COMMAND, args: '' })
+
+  // Only 3 of the row's rows are on screen: room for the title, one item and the rest's count.
+  const short = {
+    ...atTopEdge(7),
+    props: { ...atTopEdge(7).props, onScreen: { first: 7, last: 9, of: 10 } },
+  } as const
+  const top = await $.ui.mount({ plugin: 'checklist', surface: 'terminal', ...short })
+  expect((await top.find({ key: 'toggle' }))?.text).toMatch(/^▾ Next steps 0\/3 done/)
+  expect((await top.findAll({ type: 'Button', text: ROW })).map(row => row.text)).toEqual([
+    '▸ 1. Fix the auth bug',
+  ])
+  expect(await top.find({ type: 'Text', text: '… 2 more' })).toBeDefined()
+  expect((await top.find({ key: 'pinned' }))?.props).toMatchObject({ height: 3, overflow: 'hidden' })
+  await top.unmount()
+
+  // One row on screen: the title line alone.
+  const sliver = {
+    ...atTopEdge(9),
+    props: { ...atTopEdge(9).props, onScreen: { first: 9, last: 9, of: 10 } },
+  } as const
+  const thin = await $.ui.mount({ plugin: 'checklist', surface: 'terminal', ...sliver })
+  expect(await thin.find({ key: 'toggle' })).toBeDefined()
+  expect(await thin.findAll({ type: 'Button', text: ROW })).toEqual([])
+  expect(await thin.find({ type: 'Text', text: /more$/ })).toBeUndefined()
+  await thin.unmount()
+})
+
 test('with no checklist, transcript rows draw exactly as the engine does', async ($, on) => {
   engineBeneath(on)
   await start($)
