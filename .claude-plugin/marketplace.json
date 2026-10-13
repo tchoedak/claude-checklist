@@ -1,0 +1,19 @@
+{
+  "name": "claude-checklist",
+  "owner": {
+    "name": "Tenzin Choedak",
+    "url": "https://github.com/tchoedak"
+  },
+  "plugins": [
+    {
+      "name": "checklist",
+      "source": "./",
+      "description": "Pin a list from Claude's reply as a checklist at the top of your session: short items, click to expand, check off or remove",
+      "category": "productivity",
+      "tags": ["checklist", "todo", "tasks", "pin", "mod", "terminal"]
+    }
+  ],
+  "metadata": {
+    "description": "Pin Claude's lists as a checklist at the top of your session"
+  }
+}

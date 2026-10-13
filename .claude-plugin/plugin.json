@@ -1,0 +1,14 @@
+{
+  "name": "checklist",
+  "description": "Pin a list from Claude's reply as a checklist at the top of your session: short items, click to expand, check off or remove",
+  "version": "0.1.0",
+  "author": {
+    "name": "Tenzin Choedak",
+    "url": "https://github.com/tchoedak"
+  },
+  "homepage": "https://github.com/tchoedak/claude-checklist",
+  "repository": "https://github.com/tchoedak/claude-checklist",
+  "license": "MIT",
+  "keywords": ["checklist", "todo", "tasks", "pin", "mod", "terminal", "claude-code"],
+  "types": "./types/index.d.ts"
+}
